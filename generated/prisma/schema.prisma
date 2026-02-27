@@ -1,0 +1,238 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  email        String     @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  role         Role       @default(CUSTOMER)
+  orders       Order[]
+  addresses    Address[]
+  reviews      Review[]
+  wishlists    Wishlist[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([role])
+}
+
+model Product {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  slug           String         @unique
+  description    String
+  price          Float
+  compareAtPrice Float?
+  sku            String         @unique
+  stockQuantity  Int            @default(0)
+  isPublished    Boolean        @default(false)
+  images         Json
+  categoryId     String?        @db.ObjectId
+  category       Category?      @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orderItems     OrderItem[]
+  reviews        Review[]
+  wishlistItems  WishlistItem[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([categoryId])
+  @@index([isPublished])
+  @@index([createdAt])
+}
+
+model Category {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String     @unique
+  description String?
+  parentId    String?    @db.ObjectId
+  parent      Category?  @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children    Category[] @relation("CategoryToCategory")
+  products    Product[]
+
+  @@index([parentId])
+}
+
+model Order {
+  id                  String               @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber         String               @unique
+  userId              String?              @db.ObjectId
+  user                User?                @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  guestEmail          String?
+  status              OrderStatus          @default(PENDING)
+  subtotal            Float
+  shippingCost        Float                @default(0)
+  taxAmount           Float                @default(0)
+  totalAmount         Float
+  currency            String               @default("USD")
+  paymentIntentId     String?
+  shippingAddress     Json
+  billingAddress      Json?
+  items               OrderItem[]
+  shipment            Shipment?
+  paymentTransactions PaymentTransaction[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  orderId     String  @db.ObjectId
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productId   String  @db.ObjectId
+  product     Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productName String // Snapshot
+  sku         String // Snapshot
+  quantity    Int
+  price       Float // Snapshot
+  total       Float
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Shipment {
+  id                String         @id @default(auto()) @map("_id") @db.ObjectId
+  orderId           String         @unique @db.ObjectId
+  order             Order          @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  carrier           String
+  trackingNumber    String
+  trackingUrl       String?
+  shippedAt         DateTime?
+  estimatedDelivery DateTime?
+  deliveredAt       DateTime?
+  status            ShipmentStatus @default(PENDING)
+
+  @@index([status])
+  @@index([trackingNumber])
+}
+
+model Address {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  firstName  String
+  lastName   String
+  line1      String
+  line2      String?
+  city       String
+  state      String?
+  postalCode String
+  country    String
+  phone      String?
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isDefault])
+}
+
+model Review {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productId   String   @db.ObjectId
+  product     Product  @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rating      Int
+  title       String?
+  comment     String?
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, productId]) // Prevent duplicate reviews
+  @@index([userId])
+  @@index([productId])
+  @@index([isPublished])
+  @@index([createdAt])
+}
+
+model Wishlist {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String         @db.ObjectId
+  user      User           @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  name      String         @default("Default")
+  items     WishlistItem[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([userId, name]) // One wishlist name per user
+  @@index([userId])
+}
+
+model WishlistItem {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  wishlistId String   @db.ObjectId
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productId  String   @db.ObjectId
+  product    Product  @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+
+  @@unique([wishlistId, productId]) // Prevent duplicate items
+  @@index([wishlistId])
+  @@index([productId])
+}
+
+model PaymentTransaction {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  orderId       String    @db.ObjectId
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  provider      String
+  providerTxnId String?
+  amount        Float
+  currency      String    @default("USD")
+  status        String    @default("PENDING")
+  metadata      Json?
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([providerTxnId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum ShipmentStatus {
+  PENDING
+  SHIPPED
+  IN_TRANSIT
+  DELIVERED
+  EXCEPTION
+}
