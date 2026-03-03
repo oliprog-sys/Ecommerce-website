@@ -12,7 +12,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered");
-  const callbackUrl = searchParams.get("callbackUrl") || "/account";
+  const callbackUrl = searchParams.get("callbackUrl");
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -24,7 +24,6 @@ export default function LoginPage() {
         email,
         password,
         redirect: false,
-        callbackUrl,
       });
 
       console.log("SignIn result:", result);
@@ -33,8 +32,14 @@ export default function LoginPage() {
         setError(result.error);
         setLoading(false);
       } else if (result?.ok) {
-        // Force a hard navigation to ensure the session is loaded
-        window.location.href = callbackUrl;
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
+
+        if (session?.user?.role === "ADMIN") {
+          window.location.href = "/admin";
+        } else {
+          window.location.href = "/account";
+        }
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -62,7 +67,10 @@ export default function LoginPage() {
           )}
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Email
               </label>
               <input
@@ -75,7 +83,10 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Password
               </label>
               <input

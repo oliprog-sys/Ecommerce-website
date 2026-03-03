@@ -20,7 +20,7 @@ async function testMongoDB() {
     });
     
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error);
+    console.error(' MongoDB connection failed:', error);
   } finally {
     await prisma.$disconnect();
   }

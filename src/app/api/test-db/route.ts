@@ -4,18 +4,16 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    console.log("🔍 Testing database connection...");
+    console.log(" Testing database connection...");
     
-    // Try to connect and run a simple query
     const result = await prisma.$runCommandRaw({
       ping: 1
     });
     
-    console.log("✅ Database ping successful:", result);
+    console.log(" Database ping successful:", result);
     
-    // Try to count users
     const userCount = await prisma.user.count();
-    console.log(`📊 User count: ${userCount}`);
+    console.log(` User count: ${userCount}`);
     
     return NextResponse.json({
       success: true,
@@ -24,7 +22,7 @@ export async function GET() {
       ping: result
     });
   } catch (error) {
-    console.error("❌ Database connection failed:", {
+    console.error(" Database connection failed:", {
       name: error instanceof Error ? error.name : 'Unknown',
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,

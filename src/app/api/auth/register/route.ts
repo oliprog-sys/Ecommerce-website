@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    console.log("📝 Registration attempt started");
+    console.log(" Registration attempt started");
     
     const body = await req.json();
     console.log("Request body:", { ...body, password: '[REDACTED]' });
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
     // Validate input
     if (!email || !password) {
-      console.log("❌ Missing required fields");
+      console.log(" Missing required fields");
       return NextResponse.json(
         { error: "Email and password are required" },
         { status: 400 }
@@ -22,27 +22,27 @@ export async function POST(req: Request) {
     }
 
     // Check if user already exists
-    console.log("🔍 Checking for existing user...");
+    console.log(" Checking for existing user...");
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
-      console.log("❌ User already exists:", email);
+      console.log(" User already exists:", email);
       return NextResponse.json(
         { error: "User already exists" },
         { status: 400 }
       );
     }
-    console.log("✅ No existing user found");
+    console.log(" No existing user found");
 
     // Hash password
-    console.log("🔐 Hashing password...");
+    console.log(" Hashing password...");
     const passwordHash = await bcrypt.hash(password, 10);
-    console.log("✅ Password hashed");
+    console.log(" Password hashed");
 
     // Create user
-    console.log("📦 Creating user in database...");
+    console.log(" Creating user in database...");
     const user = await prisma.user.create({
       data: {
         email,
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
         role: "CUSTOMER",
       },
     });
-    console.log("✅ User created successfully:", user.id);
+    console.log(" User created successfully:", user.id);
 
     // Return success
     return NextResponse.json({
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
-    console.error("❌ Registration error details:", {
+    console.error(" Registration error details:", {
       name: error instanceof Error ? error.name : 'Unknown',
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
