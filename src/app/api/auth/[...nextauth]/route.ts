@@ -1,6 +1,7 @@
-// src/app/api/auth/[...nextauth]/route.ts
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import AppleProvider from "next-auth/providers/apple";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
@@ -33,6 +34,13 @@ declare module "next-auth/jwt" {
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
+    // Google Provider
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    
+    
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -77,12 +85,19 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      // Initial sign in
       if (user) {
         token.id = user.id;
         token.email = user.email;
         token.role = user.role;
       }
+      
+      // Add provider info if available (for social logins)
+      if (account) {
+        token.provider = account.provider;
+      }
+      
       return token;
     },
     async session({ session, token }) {
@@ -92,11 +107,17 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
       }
       return session;
-    }
+    },
+    // async signIn({ user, account, profile }) {
+    //   if (account?.provider === "google") {
+    //     return true;
+    //   }
+    //   return true;
+    // }
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: "/login",
